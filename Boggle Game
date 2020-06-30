@@ -1,3 +1,8 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package boggler;
 
 import java.io.BufferedReader;
@@ -32,10 +37,12 @@ class BoggleSolver {
       if (word.length()>=3) {
         word = word.toUpperCase();
       if (word.length()>maxWordLength) maxWordLength = word.length();
-        DictionaryEntry entry = new DictionaryEntry();
+      
+     DictionaryEntry entry = new DictionaryEntry();
         entry.letters  = new int[word.length()  ];
         entry.triplets = new int[word.length()-2];
         int i=0;
+        
       for (char letter: word.toCharArray()) {
         entry.letters[i] = (byte) letter - 65; 
         if (i>=2)
@@ -181,7 +188,6 @@ class BoggleSolver {
     System.out.println("  Words in the dictionary: "+dictionary.length);
     System.out.println("  Longest word:            "+maxWordLength+" letters");
     System.out.println();
-
     System.out.println("  Number of words found: "+foundCount);
     System.out.println();
 
@@ -199,7 +205,7 @@ class BoggleSolver {
     }
     System.out.println();
   }
-
+        
   public static void main(String[] args) throws IOException {
     new BoggleSolver().run();
   }
