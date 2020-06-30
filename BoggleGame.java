@@ -1,0 +1,206 @@
+package boggler;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+/**
+ *
+ * @author ikiki
+ */
+public class DictionaryEntry {
+        public int[] letters;
+        public int[] triplets;
+}
+
+class BoggleSolver {
+        final int size = 5;  
+        final int boardsize    = 4;  
+        final int[] moves = {-boardsize-1, boardsize, -boardsize+1, -1, +1, +boardsize-1, +boardsize, +boardsize+1};
+
+  
+  DictionaryEntry[] dictionary; 
+  int maxWordLength = 0;
+  int[] boardTripletIndices;  
+
+  DictionaryEntry[] buildDictionary(String fileName) throws IOException {
+    BufferedReader fileReader = new BufferedReader(new FileReader(fileName));
+    String word = fileReader.readLine();
+    ArrayList<DictionaryEntry> result = new ArrayList<>();
+    while (word!=null) {
+      if (word.length()>=3) {
+        word = word.toUpperCase();
+      if (word.length()>maxWordLength) maxWordLength = word.length();
+        DictionaryEntry entry = new DictionaryEntry();
+        entry.letters  = new int[word.length()  ];
+        entry.triplets = new int[word.length()-2];
+        int i=0;
+      for (char letter: word.toCharArray()) {
+        entry.letters[i] = (byte) letter - 65; 
+        if (i>=2)
+          entry.triplets[i-2] = (((entry.letters[i-2]  << size) + entry.letters[i-1]) << size) + entry.letters[i];
+            i++;
+        }
+        result.add(entry);
+      }
+      word = fileReader.readLine();
+    }
+    return result.toArray(new DictionaryEntry[result.size()]);
+  }
+
+  boolean isWrap(int a, int b) { 
+    return Math.abs(a%boardsize-b%boardsize)>1;
+  }
+
+  int[] buildTripletIndices() {
+    ArrayList<Integer> result = new ArrayList<>();
+    for (int a=0; a<boardsize*boardsize; a++)
+      for (int bm: moves) {
+        int b=a+bm;
+        if ((b>=0) && (b<board.length) && !isWrap(a, b))
+          for (int cm: moves) {
+            int c=b+cm;
+            if ((c>=0) && (c<board.length) && (c!=a) && !isWrap(b, c)) {
+              result.add(a);
+              result.add(b);
+              result.add(c);
+            }
+          }
+      }
+    int[] result2 = new int[result.size()];
+    int i=0;
+    for (Integer r: result) result2[i++] = r;
+    return result2;
+  }
+  
+    int[] board = new int[boardsize*boardsize]; 
+    boolean[] possibleTriplets = new boolean[1 << (size*3)];
+
+    DictionaryEntry[] candidateWords;
+    int candidateCount;
+
+    int[] usedBoardPositions;
+
+    DictionaryEntry[] foundWords;
+    int foundCount;
+
+  void initializeBoard(String[] letters) {
+    for (int row=0; row<boardsize; row++)
+      for (int col=0; col<boardsize; col++)
+        board[row*boardsize + col] = (byte) letters[row].charAt(col) - 65;
+  }
+
+  void setPossibleTriplets() {
+    Arrays.fill(possibleTriplets, false); 
+    int i=0;
+    while (i<boardTripletIndices.length) {
+      int triplet = (((board[boardTripletIndices[i++]]  << size) +
+                       board[boardTripletIndices[i++]]) << size) +
+                       board[boardTripletIndices[i++]];
+      possibleTriplets[triplet] = true; 
+    }
+  }
+
+  void checkWordTriplets() {
+    candidateCount = 0;
+    for (DictionaryEntry entry: dictionary) {
+      boolean ok = true;
+      int len = entry.triplets.length;
+      for (int t=0; (t<len) && ok; t++)
+        ok = possibleTriplets[entry.triplets[t]];
+      if (ok) candidateWords[candidateCount++] = entry;
+    }
+  }
+
+  void checkWords() { 
+    foundCount = 0;
+    for (int i=0; i<candidateCount; i++) {
+      DictionaryEntry candidate = candidateWords[i];
+      for (int j=0; j<board.length; j++)
+        if (board[j]==candidate.letters[0]) { 
+          usedBoardPositions[0] = j;
+          if (checkNextLetters(candidate, 1, j)) {
+            foundWords[foundCount++] = candidate;
+            break;
+          }
+        }
+    }
+  }
+
+  boolean checkNextLetters(DictionaryEntry candidate, int letter, int pos) {
+    if (letter==candidate.letters.length) return true;
+    int match = candidate.letters[letter];
+    for (int move: moves) {
+      int next=pos+move;
+      if ((next>=0) && (next<board.length) && (board[next]==match) && !isWrap(pos, next)) {
+        boolean ok = true;
+        for (int i=0; (i<letter) && ok; i++)
+          ok = usedBoardPositions[i]!=next;
+        if (ok) {
+          usedBoardPositions[letter] = next;
+          if (checkNextLetters(candidate, letter+1, next)) return true;
+        }
+      }
+    }   
+    return false;
+  }
+
+  String formatTime(long start, long end, long repetitions) {
+    long time = (end-start)/repetitions;
+    return time/1000000 + "." + (time/100000) % 10 + "" + (time/10000) % 10 + "ms";
+  }
+
+  String getWord(DictionaryEntry entry) {
+    char[] result = new char[entry.letters.length];
+    int i=0;
+    for (int letter: entry.letters)
+      result[i++] = (char) (letter+97);
+    return new String(result);
+  }
+
+  void run() throws IOException {
+
+    dictionary = buildDictionary("C:\\Users\\ikiki\\OneDrive\\Documents\\dictionary.txt");
+    boardTripletIndices = buildTripletIndices();
+
+    candidateWords     = new DictionaryEntry[dictionary.length]; 
+    foundWords         = new DictionaryEntry[dictionary.length]; 
+    usedBoardPositions = new int[maxWordLength];
+
+    for (int n=1; n<=100; n++) {
+      initializeBoard(new String[] {"RAEL",
+                                    "MOFS",
+                                    "TEOK",
+                                    "NATI"});
+      setPossibleTriplets();
+      checkWordTriplets();
+      checkWords();
+    }
+
+    System.out.println("  Words in the dictionary: "+dictionary.length);
+    System.out.println("  Longest word:            "+maxWordLength+" letters");
+    System.out.println();
+
+    System.out.println("  Number of words found: "+foundCount);
+    System.out.println();
+
+    System.out.println("Words found:");
+    int w=0;
+    System.out.print("  ");
+    for (int i=0; i<foundCount; i++) {
+      System.out.print(getWord(foundWords[i]));
+      w++;
+      if (w==10) {
+        w=0;
+        System.out.println(); System.out.print("  ");
+      } else
+        if (i<foundCount-1) System.out.print(", ");
+    }
+    System.out.println();
+  }
+
+  public static void main(String[] args) throws IOException {
+    new BoggleSolver().run();
+  }
+}
